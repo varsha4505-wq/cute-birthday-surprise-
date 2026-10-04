@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Birthday Surprise Maker</title>
+
+<style>
+  /* ---------- colour themes (each theme just changes these variables) ---------- */
+  :root, body[data-theme="pink"] {
+    --bg: linear-gradient(135deg, #ffd6e8, #e0c3fc);
+    --text: #4a2040; --accent: #c2185b; --accent2: #7b5ea7;
+    --cardbg: #fffaf3; --cardtext: #4a2040;
+    --panel: rgba(255,255,255,0.65); --inputbg: #ffffff; --inputtext: #4a2040; --inputborder: #e5b8d4;
+    --note: #8a2a2a; --soft: #7a5a70;
+  }
+  body[data-theme="ocean"] {
+    --bg: linear-gradient(135deg, #c9eaff, #b8f1e6);
+    --text: #12384f; --accent: #0277bd; --accent2: #00897b;
+    --cardbg: #f4fbff; --cardtext: #12384f;
+    --panel: rgba(255,255,255,0.65); --inputbg: #ffffff; --inputtext: #12384f; --inputborder: #a6d4ea;
+    --note: #8a2a2a; --soft: #4d7387;
+  }
+  body[data-theme="sunset"] {
+    --bg: linear-gradient(135deg, #ffd9a8, #ffa6c1);
+    --text: #5a2a1a; --accent: #d9480f; --accent2: #b5179e;
+    --cardbg: #fff7ef; --cardtext: #5a2a1a;
+    --panel: rgba(255,255,255,0.65); --inputbg: #ffffff; --inputtext: #5a2a1a; --inputborder: #f0b9a0;
+    --note: #8a2a2a; --soft: #86584a;
+  }
+  body[data-theme="mint"] {
+    --bg: linear-gradient(135deg, #d4f8d9, #fff3b0);
+    --text: #1f4a2b; --accent: #2e8b57; --accent2: #6b7d1f;
+    --cardbg: #fbfff5; --cardtext: #1f4a2b;
+    --panel: rgba(255,255,255,0.65); --inputbg: #ffffff; --inputtext: #1f4a2b; --inputborder: #b5dcb9;
+    --note: #8a2a2a; --soft: #547a5f;
+  }
+  body[data-theme="gold"] {
+    --bg: linear-gradient(135deg, #fff1c1, #ffd9e0);
+    --text: #4a3410; --accent: #a8740a; --accent2: #8d5a97;
+    --cardbg: #fffdf4; --cardtext: #4a3410;
+    --panel: rgba(255,255,255,0.65); --inputbg: #ffffff; --inputtext: #4a3410; --inputborder: #e8d391;
+    --note: #8a2a2a; --soft: #7d6a3f;
+  }
+  body[data-theme="midnight"] {
+    --bg: linear-gradient(135deg, #1b1340, #3a1c71);
+    --text: #f2e9ff; --accent: #d63384; --accent2: #5b4bc4;
+    --cardbg: #2a2057; --cardtext: #f2e9ff;
+    --panel: rgba(255,255,255,0.1); --inputbg: #2a2057; --inputtext: #f2e9ff; --inputborder: #5b4bc4;
+    --note: #ffb3b3; --soft: #bba9e0;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    font-family: Georgia, "Times New Roman", serif; text-align: center;
+    background: var(--bg); color: var(--text); padding: 20px;
+  }
+  .screen { display: none; max-width: 560px; width: 100%; animation: fade 0.7s ease; }
+  .screen.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+
+  h1 { font-size: 2.4rem; margin: 10px 0; color: var(--accent); }
+  h2 { font-size: 1.7rem; margin: 10px 0 25px; }
+  p  { font-size: 1.2rem; line-height: 1.6; }
+  .big { font-size: 4rem; }
+
+  button {
+    font-family: inherit; font-size: 1.2rem; padding: 12px 34px; margin: 8px;
+    border: none; border-radius: 30px; cursor: pointer; color: #fff;
+    background: var(--accent); transition: transform 0.2s;
+  }
+  button:hover { transform: scale(1.08); }
+  button.no { background: var(--accent2); }
+  button.small { font-size: 1rem; padding: 9px 22px; }
+  .row { display: flex; justify-content: center; flex-wrap: wrap; align-items: center; }
+
+  .gift {
+    font-size: 5.5rem; cursor: pointer; display: inline-block; margin: 10px 14px;
+    animation: bounce 1.6s infinite; transition: transform 0.2s;
+  }
+  .gift:nth-child(2) { animation-delay: 0.3s; }
+  .gift:nth-child(3) { animation-delay: 0.6s; }
+  .gift:hover { transform: scale(1.2); }
+  .gift.opened { animation: none; opacity: 0.45; }
+  @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+
+  #popup {
+    display: none; position: fixed; inset: 0; background: rgba(40,10,40,0.6);
+    align-items: center; justify-content: center; padding: 20px; z-index: 10;
+  }
+  #popup.show { display: flex; }
+  #card {
+    background: var(--cardbg); color: var(--cardtext); border-radius: 18px; padding: 28px;
+    max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; animation: fade 0.5s ease;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  }
+  #card img { max-width: 100%; border-radius: 12px; margin-top: 10px; }
+  .letter { text-align: left; white-space: pre-line; font-style: italic; }
+  .petal { position: fixed; top: -30px; font-size: 1.6rem; animation: fall linear forwards; pointer-events: none; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(360deg); } }
+
+  /* creator form */
+  .form { background: var(--panel); border-radius: 18px; padding: 22px; text-align: left; }
+  .form label { display: block; font-size: 1rem; margin: 14px 0 5px; font-weight: bold; }
+  .form input, .form textarea, .form select {
+    width: 100%; font-family: inherit; font-size: 1.05rem; padding: 10px 12px;
+    border: 2px solid var(--inputborder); border-radius: 10px;
+    background: var(--inputbg); color: var(--inputtext);
+  }
+  .form textarea { resize: vertical; }
+  .form small { color: var(--soft); }
+  #result { display: none; margin-top: 18px; text-align: center; }
+  #result.show { display: block; }
+  #linkBox { font-size: 0.95rem !important; }
+  .note { font-size: 0.95rem; color: var(--note); }
+  .makeown { display: inline-block; margin-top: 8px; color: var(--accent); font-size: 1.05rem; }
+
+  /* theme swatches */
+  .swatches { display: flex; flex-wrap: wrap; gap: 4px; }
+  button.sw {
+    width: 46px; height: 46px; padding: 0; margin: 4px; border-radius: 50%;
+    border: 3px solid transparent;
+  }
+  button.sw.sel { border-color: var(--text); transform: scale(1.12); }
+
+  /* music button */
+  #musicBtn {
+    position: fixed; top: 14px; right: 14px; z-index: 20; width: 48px; height: 48px;
+    padding: 0; margin: 0; font-size: 1.4rem; display: none;
+  }
+  #musicBtn.show { display: block; }
+  .hidden { display: none; }
+</style>
+</head>
+
+<body data-theme="pink">
+
+<button id="musicBtn" title="Music on / off" onclick="toggleMusic()">🔇</button>
+
+<!-- ===================== CREATOR (shown when there is no link data) ===================== -->
+<div class="screen" id="s-create">
+  <div class="big">🎁</div>
+  <h1>Make a Birthday Surprise</h1>
+  <p>Fill this in, get a link, and send it to your friend 💖</p>
+
+  <div class="form">
+    <label for="fName">Your friend's name *</label>
+    <input id="fName" maxlength="40" placeholder="e.g. Priya">
+
+    <label for="fFrom">Your name</label>
+    <input id="fFrom" maxlength="40" placeholder="e.g. Anu">
+
+    <label>Colour theme</label>
+    <div class="swatches" id="swatches"></div>
+
+    <label for="fMusic">Background music</label>
+    <select id="fMusic" onchange="musicChoiceChanged()">
+      <option value="box">🎵 Music box lullaby</option>
+      <option value="chimes">🔔 Soft chimes</option>
+      <option value="custom">🔗 My own song (link)</option>
+      <option value="off">🔇 No music</option>
+    </select>
+    <div id="customMusicBox" class="hidden">
+      <input id="fMusicUrl" maxlength="500" placeholder="https://... direct link to an .mp3 file" style="margin-top:8px;">
+      <small>It must be a direct link to an audio file. Many websites block this, so test it with the button below.</small>
+    </div>
+    <div class="row" style="justify-content:flex-start;">
+      <button class="small no" id="hearBtn" onclick="previewMusic()">▶ Hear it</button>
+    </div>
+
+    <label for="fEmoji">Box 1: gift emoji</label>
+    <input id="fEmoji" maxlength="8" value="🎧">
+
+    <label for="fGift">Box 1: what is the gift?</label>
+    <textarea id="fGift" rows="2" maxlength="300" placeholder="e.g. A movie date + snacks on me 🍿"></textarea>
+
+    <label for="fCard">Box 2: greeting card message</label>
+    <textarea id="fCard" rows="2" maxlength="300" placeholder="e.g. Another year older, another year more amazing! 💖"></textarea>
+
+    <label for="fPhoto">Box 2: photo link (optional)</label>
+    <input id="fPhoto" maxlength="500" placeholder="https://... link to an image online">
+    <small>Needs a link that starts with https:// and ends in .jpg or .png. Upload the photo to a free image site such as imgbb.com and paste its direct link.</small>
+
+    <label for="fLetter">Box 3: your letter</label>
+    <textarea id="fLetter" rows="6" maxlength="1500" placeholder="Dear Priya,&#10;&#10;Write something from the heart..."></textarea>
+
+    <div class="row"><button onclick="createLink()">Create my link ✨</button></div>
+
+    <div id="result">
+      <p><strong>Your link is ready! 🎉</strong></p>
+      <input id="linkBox" readonly onclick="this.select()">
+      <div class="row">
+        <button class="small" onclick="copyLink()">Copy link</button>
+        <button class="small" onclick="shareWhatsApp()">Send on WhatsApp</button>
+        <button class="small no" onclick="previewLink()">Preview</button>
+      </div>
+      <p id="copied" style="font-size:1rem;"></p>
+    </div>
+    <p class="note" id="fileNote" style="display:none;">
+      ⚠️ This page is opened from your computer, so the link won't work for other people yet.
+      Publish this page online first (for example on Netlify Drop), then use the published address.
+    </p>
+  </div>
+</div>
+
+<!-- ===================== SURPRISE (shown when opened from a link) ===================== -->
+<div class="screen" id="s-wish">
+  <div class="big">🎂</div>
+  <h1 id="wishTitle"></h1>
+  <p>Wishing you a day as wonderful as you are ✨</p>
+  <button onclick="show('s-ask'); beginMusic();">Next ➜</button>
+</div>
+
+<div class="screen" id="s-ask">
+  <div class="big">🎁</div>
+  <h2>Do you want to see what I have for you?</h2>
+  <div class="row">
+    <button onclick="show('s-gifts'); celebrate();">Yes</button>
+    <button class="no" onclick="show('s-no')">No</button>
+  </div>
+</div>
+
+<div class="screen" id="s-no">
+  <div class="big">😢</div>
+  <h2>How can you not see what I have for you?</h2>
+  <button onclick="show('s-ask')">Okay, let me think again…</button>
+</div>
+
+<div class="screen" id="s-gifts">
+  <h2>Pick a box 💝</h2>
+  <div>
+    <span class="gift" id="g0">🎁</span>
+    <span class="gift" id="g1">🎁</span>
+    <span class="gift" id="g2">🎁</span>
+  </div>
+  <p id="hint">Open all three, one by one!</p>
+  <a class="makeown" id="makeOwn" href="" style="display:none;">💝 Make a surprise for your own friend</a>
+</div>
+
+<div id="popup"><div id="card"></div></div>
+
+
+<script>
+/* ---------- helpers ---------- */
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;   // textContent = safe, no HTML injection
+  return e;
+}
+function encodeData(obj) {
+  const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+  return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function decodeData(str) {
+  let b64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (b64.length % 4) b64 += "=";
+  return JSON.parse(decodeURIComponent(escape(atob(b64))));
+}
+function baseUrl() { return location.origin + location.pathname; }
+
+/* ---------- themes ---------- */
+const THEMES = {
+  pink:     { name: "Pink dream", a: "#ffd6e8", b: "#e0c3fc" },
+  ocean:    { name: "Ocean",      a: "#c9eaff", b: "#b8f1e6" },
+  sunset:   { name: "Sunset",     a: "#ffd9a8", b: "#ffa6c1" },
+  mint:     { name: "Mint garden",a: "#d4f8d9", b: "#fff3b0" },
+  gold:     { name: "Golden",     a: "#fff1c1", b: "#ffd9e0" },
+  midnight: { name: "Midnight",   a: "#1b1340", b: "#3a1c71" }
+};
+let chosenTheme = "pink";
+
+function applyTheme(key) {
+  if (!THEMES[key]) key = "pink";
+  chosenTheme = key;
+  document.body.setAttribute("data-theme", key);
+  document.querySelectorAll("button.sw").forEach(b => b.classList.toggle("sel", b.dataset.key === key));
+}
+
+/* ---------- music (made in the browser, so no audio files are needed) ---------- */
+const MELODY = [659.25,783.99,880,783.99, 659.25,587.33,523.25,null, 587.33,659.25,783.99,659.25, 587.33,523.25,440,null,
+                523.25,659.25,783.99,1046.5, 880,783.99,659.25,null, 587.33,659.25,587.33,523.25, 392,null,523.25,null];
+const BASS   = [130.81, 110, 130.81, 98];
+const PENTA  = [523.25, 587.33, 659.25, 783.99, 880, 1046.5];
+
+let actx = null, master = null, timer = null, step = 0, nextT = 0;
+let audioEl = null, playing = false, curStyle = "off", curUrl = "";
+
+function ensureCtx() {
+  if (!actx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    actx = new AC();
+    master = actx.createGain(); master.gain.value = 0.5;
+    const delay = actx.createDelay(); delay.delayTime.value = 0.32;
+    const fb = actx.createGain(); fb.gain.value = 0.3;
+    delay.connect(fb); fb.connect(delay);
+    master.connect(actx.destination);
+    master.connect(delay); delay.connect(actx.destination);
+  }
+  if (actx.state === "suspended") actx.resume();
+  return true;
+}
+function tone(freq, t, dur, type, vol) {
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(master);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+function tick() {
+  while (nextT < actx.currentTime + 0.3) {
+    if (curStyle === "box") {
+      const note = MELODY[step % MELODY.length];
+      if (note) tone(note, nextT, 0.9, "sine", 0.22);
+      if (step % 8 === 0) tone(BASS[Math.floor(step / 8) % BASS.length], nextT, 2.5, "triangle", 0.16);
+      nextT += 0.42;
+    } else {
+      if (Math.random() > 0.3) tone(PENTA[Math.floor(Math.random() * PENTA.length)], nextT, 2.4, "sine", 0.18);
+      nextT += 1.1;
+    }
+    step++;
+  }
+}
+function stopMusic() {
+  if (timer) { clearInterval(timer); timer = null; }
+  if (audioEl) { audioEl.pause(); audioEl = null; }
+  playing = false;
+  updateMusicUI();
+}
+function startMusic(style, url) {
+  stopMusic();
+  curStyle = style; curUrl = url || "";
+  if (style === "box" || style === "chimes") {
+    if (!ensureCtx()) return;
+    step = 0; nextT = actx.currentTime + 0.1;
+    timer = setInterval(tick, 100);
+    playing = true;
+  } else if (style === "custom" && /^https?:\/\//i.test(curUrl)) {
+    audioEl = new Audio(curUrl);
+    audioEl.loop = true; audioEl.volume = 0.6;
+    audioEl.play().catch(() => { playing = false; updateMusicUI(); });
+    playing = true;
+  }
+  updateMusicUI();
+}
+function updateMusicUI() {
+  document.getElementById("musicBtn").textContent = playing ? "🔊" : "🔇";
+  document.getElementById("hearBtn").textContent = playing ? "⏹ Stop" : "▶ Hear it";
+}
+function toggleMusic() {
+  if (playing) stopMusic(); else startMusic(curStyle, curUrl);
+}
+
+/* ---------- decide which mode we are in ---------- */
+let CONFIG = null;
+const dataParam = new URLSearchParams(location.search).get("d");
+if (dataParam) {
+  try {
+    const d = decodeData(dataParam);
+    const music = ["box", "chimes", "custom", "off"].includes(d.m) ? d.m : "off";
+    CONFIG = {
+      name:  String(d.n || "Friend").slice(0, 40),
+      from:  String(d.f || "").slice(0, 40),
+      emoji: Array.from(String(d.e || "🎁")).slice(0, 4).join(""),
+      gift:  String(d.g || "A surprise gift just for you!").slice(0, 300),
+      card:  String(d.c || "Wishing you the happiest birthday ever! 💖").slice(0, 300),
+      photo: /^https?:\/\//i.test(String(d.p || "")) ? String(d.p).slice(0, 500) : "",
+      letter:String(d.l || "Happy Birthday! 💖").slice(0, 1500),
+      theme: THEMES[d.t] ? d.t : "pink",
+      music: music,
+      musicUrl: /^https?:\/\//i.test(String(d.u || "")) ? String(d.u).slice(0, 500) : ""
+    };
+    if (CONFIG.music === "custom" && !CONFIG.musicUrl) CONFIG.music = "off";
+  } catch (e) { CONFIG = null; }
+}
+
+/* build the theme swatches for the creator */
+const swWrap = document.getElementById("swatches");
+Object.keys(THEMES).forEach(key => {
+  const b = el("button", "sw");
+  b.dataset.key = key;
+  b.title = THEMES[key].name;
+  b.style.background = "linear-gradient(135deg," + THEMES[key].a + "," + THEMES[key].b + ")";
+  b.addEventListener("click", () => applyTheme(key));
+  swWrap.appendChild(b);
+});
+
+if (CONFIG) {
+  applyTheme(CONFIG.theme);
+  document.getElementById("wishTitle").textContent = "Happy Birthday, " + CONFIG.name + "! 🎉";
+  document.title = "Happy Birthday " + CONFIG.name + "!";
+  document.getElementById("makeOwn").href = baseUrl();
+  curStyle = CONFIG.music; curUrl = CONFIG.musicUrl;
+  if (CONFIG.music !== "off") document.getElementById("musicBtn").classList.add("show");
+  show("s-wish");
+} else {
+  applyTheme("pink");
+  if (location.protocol === "file:") document.getElementById("fileNote").style.display = "block";
+  show("s-create");
+}
+
+/* music starts on the first click (browsers do not allow sound before that) */
+let musicBegun = false;
+function beginMusic() {
+  if (musicBegun || !CONFIG || CONFIG.music === "off") return;
+  musicBegun = true;
+  startMusic(CONFIG.music, CONFIG.musicUrl);
+}
+
+/* ---------- creator logic ---------- */
+let lastLink = "";
+
+function musicChoiceChanged() {
+  const v = document.getElementById("fMusic").value;
+  document.getElementById("customMusicBox").classList.toggle("hidden", v !== "custom");
+  if (playing) stopMusic();
+}
+function previewMusic() {
+  if (playing) { stopMusic(); return; }
+  const v = document.getElementById("fMusic").value;
+  if (v === "off") { alert("Music is set to 'No music'."); return; }
+  const url = document.getElementById("fMusicUrl").value.trim();
+  if (v === "custom" && !/^https?:\/\//i.test(url)) { alert("Paste a link starting with https:// first."); return; }
+  startMusic(v, url);
+}
+
+function createLink() {
+  const name = document.getElementById("fName").value.trim();
+  if (!name) { alert("Please enter your friend's name first 🙂"); return; }
+
+  const music = document.getElementById("fMusic").value;
+  const musicUrl = document.getElementById("fMusicUrl").value.trim();
+  if (music === "custom" && !/^https?:\/\//i.test(musicUrl)) {
+    alert("For your own song, paste a link starting with https://  (or choose another music option)");
+    return;
+  }
+
+  const data = {
+    n: name,
+    f: document.getElementById("fFrom").value.trim(),
+    e: document.getElementById("fEmoji").value.trim(),
+    g: document.getElementById("fGift").value.trim(),
+    c: document.getElementById("fCard").value.trim(),
+    p: document.getElementById("fPhoto").value.trim(),
+    l: document.getElementById("fLetter").value.trim(),
+    t: chosenTheme,
+    m: music,
+    u: music === "custom" ? musicUrl : ""
+  };
+  if (data.p && !/^https?:\/\//i.test(data.p)) {
+    alert("The photo link must start with https://  (or leave it empty)");
+    return;
+  }
+  lastLink = baseUrl() + "?d=" + encodeData(data);
+  document.getElementById("linkBox").value = lastLink;
+  document.getElementById("copied").textContent = "";
+  document.getElementById("result").classList.add("show");
+}
+
+function copyLink() {
+  const box = document.getElementById("linkBox");
+  const done = () => document.getElementById("copied").textContent = "Copied! ✅";
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(lastLink).then(done, () => { box.select(); document.execCommand("copy"); done(); });
+  } else { box.select(); document.execCommand("copy"); done(); }
+}
+function shareWhatsApp() {
+  const msg = "I made a little birthday surprise for you 🎁 Open it here: " + lastLink;
+  window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
+}
+function previewLink() { stopMusic(); window.open(lastLink, "_blank"); }
+
+/* ---------- surprise logic ---------- */
+const opened = new Set();
+
+["g0", "g1", "g2"].forEach((id, i) => {
+  document.getElementById(id).addEventListener("click", () => openBox(i));
+});
+document.getElementById("popup").addEventListener("click", e => {
+  if (e.target.id === "popup") closeBox();
+});
+
+function openBox(i) {
+  const card = document.getElementById("card");
+  card.replaceChildren();
+
+  if (i === 0) {
+    card.append(el("div", "big", CONFIG.emoji), el("h2", "", "A little gift for you!"), el("p", "", CONFIG.gift));
+  } else if (i === 1) {
+    card.append(el("div", "big", "💌"), el("h2", "", "A card for you"), el("p", "", CONFIG.card));
+    if (CONFIG.photo) {
+      const img = el("img");
+      img.src = CONFIG.photo;
+      img.alt = "Photo";
+      img.referrerPolicy = "no-referrer";
+      img.onerror = () => img.remove();
+      card.append(img);
+    }
+  } else {
+    card.append(el("div", "big", "✉️"), el("h2", "", "A letter for you"), el("p", "letter", CONFIG.letter));
+  }
+
+  const close = el("button", "", "Close");
+  close.addEventListener("click", closeBox);
+  card.append(close);
+
+  document.getElementById("popup").classList.add("show");
+  document.getElementById("g" + i).classList.add("opened");
+  opened.add(i);
+  celebrate();
+}
+
+function closeBox() {
+  document.getElementById("popup").classList.remove("show");
+  if (opened.size === 3) {
+    const who = CONFIG.from ? " — " + CONFIG.from : "";
+    document.getElementById("hint").textContent = "Hope you loved it! Happy Birthday again, " + CONFIG.name + " 💖" + who;
+    document.getElementById("makeOwn").style.display = "inline-block";
+  }
+}
+
+function celebrate() {
+  const items = ["🎉", "✨", "💖", "🎈", "🌸"];
+  for (let n = 0; n < 25; n++) {
+    const p = el("span", "petal", items[Math.floor(Math.random() * items.length)]);
+    p.style.left = Math.random() * 100 + "vw";
+    p.style.animationDuration = (2 + Math.random() * 2.5) + "s";
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 5000);
+  }
+}
+</script>
+</body>
+</html>
